@@ -43,3 +43,25 @@ npx wrangler@latest dev
 You can go to `http://localhost:8787/todos` in your browser and you should see some results.
 
 Feel free to report issues
+
+## Common errors
+
+### `ValueError: [TypeError("'pyodide.ffi.JsProxy' object is not iterable"), TypeError('vars() argument must have __dict__ attribute')]`
+
+This happens because `pyodide.ffi.JsProxy` is not json serializable, so you have to use `.to_py()` to get native python object, like this:
+```python
+class TodoDB:
+    @staticmethod
+    async def get_todos(db):
+        query = """
+            SELECT id, user_id, text
+            FROM todos;
+        """
+        results = await db.prepare(query).all()
+        return results.results
+
+@app.get("/todos")
+async def get_todos(request: Request):
+    results = await TodoDB.get_todos(request.scope["env"].DB)
+    return results.to_py()
+```
